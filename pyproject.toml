@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "merlin-ai"
+version = "0.0.1"
+description = ""
+authors = ["Matevz Poljanc"]
+readme = "README.md"
+packages = [{include = "merlin_ai"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+openai = "^0.28.1"
+tiktoken = "^0.5.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.0.2"
+black = "^23.10.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

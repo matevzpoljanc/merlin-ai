@@ -12,6 +12,12 @@ class PromptBase:
     Base class for creating Prompts
     """
 
+    def as_dict(self) -> dict:
+        """
+        Get prompt as kwargs dict for library call
+        """
+        raise NotImplementedError()
+
     def get_llm_response(self):
         """
         Get response to the prompt from LLM
@@ -44,9 +50,12 @@ class OpenAIPrompt(PromptBase):
         """
         self._messages.append(({"role": role, "content": content}))
 
+    def as_dict(self) -> dict:
+        return {
+            **self._model_settings,
+            "messages": self._messages,
+        }
+
     def get_llm_response(self):
         openai.api_key = os.environ.get("OPENAI_API_KEY")
-        return openai.ChatCompletion.create(
-            **self._model_settings,
-            messages=self._messages,
-        )
+        return openai.ChatCompletion.create(**self.as_dict())

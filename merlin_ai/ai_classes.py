@@ -23,6 +23,22 @@ class BaseAIClass:
         self._data_class = data_class
         self._model_settings = model_settings
 
+    def as_prompt(
+        self,
+        value: str,
+        model_settings: Optional[dict] = None,
+    ) -> dict:
+        """
+        Get prompt which would be used when evaluating model.
+        """
+        llm_settings = self._get_llm_settings(model_settings)
+        prompt_dict = self._generate_prompt(value, llm_settings).as_dict()
+
+        if "api_key" in prompt_dict:
+            del prompt_dict["api_key"]
+
+        return prompt_dict
+
     def _generate_prompt(self, value: str, model_settings: dict) -> PromptBase:
         """
         Generate LLM prompt from provided value

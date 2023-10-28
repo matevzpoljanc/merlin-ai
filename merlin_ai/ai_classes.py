@@ -96,6 +96,9 @@ class OpenAIModel(BaseAIClass):
     OpenAI-based AI Model
     """
 
+    def __str__(self):
+        return f"OpenAIModel: {self._data_class.__name__}"
+
     @staticmethod
     def _generate_function_call_object(data_class: Type) -> dict:
         """
@@ -144,6 +147,9 @@ class OpenAIEnum(BaseAIClass):
     """
     OpenAI-based AI Enum
     """
+
+    def __str__(self):
+        return f"OpenAIEnum: {self._data_class.__name__}"
 
     def _create_instance_from_response(self, llm_response):
         content = llm_response.choices[0].message.content

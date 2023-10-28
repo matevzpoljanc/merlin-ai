@@ -27,19 +27,24 @@ class BaseAIClass:
         self,
         value: str,
         model_settings: Optional[dict] = None,
+        instruction: Optional[str] = None,
     ) -> dict:
         """
         Get prompt which would be used when evaluating model.
         """
         llm_settings = self._get_llm_settings(model_settings)
-        prompt_dict = self._generate_prompt(value, llm_settings).as_dict()
+        prompt_dict = self._generate_prompt(
+            value, model_settings=llm_settings, instruction=instruction
+        ).as_dict()
 
         if "api_key" in prompt_dict:
             del prompt_dict["api_key"]
 
         return prompt_dict
 
-    def _generate_prompt(self, value: str, model_settings: dict) -> PromptBase:
+    def _generate_prompt(
+        self, value: str, model_settings: dict, instruction: Optional[str] = None
+    ) -> PromptBase:
         """
         Generate LLM prompt from provided value
         :param value:
@@ -71,17 +76,22 @@ class BaseAIClass:
         self,
         value: str,
         model_settings: Optional[dict] = None,
+        instruction: Optional[str] = None,
         return_raw_response: bool = False,
     ):
         """
         Call LLM model, parse the response and instantiate data class
         :param value: user provided string from which to instantiate data class
         :param model_settings: settings for LLM model
+        :param instruction: custom instruction to use when generating LLM prompt
+        :param return_raw_response: if True raw response from LLM API will be returned alongside the AIModel instance
         :return: instance of data class
         """
         llm_settings = self._get_llm_settings(model_settings)
 
-        prompt = self._generate_prompt(value, llm_settings)
+        prompt = self._generate_prompt(
+            value, model_settings=llm_settings, instruction=instruction
+        )
         response = prompt.get_llm_response()
 
         instance = self._create_instance_from_response(response)
@@ -119,13 +129,23 @@ class OpenAIModel(BaseAIClass):
         return self._data_class(**arguments)
 
     def _generate_prompt(
-        self, value: str, model_settings: Optional[dict] = None
+        self,
+        value: str,
+        model_settings: Optional[dict] = None,
+        instruction: Optional[str] = None,
     ) -> PromptBase:
         function_name = "format_response"
         model_settings["functions"] = [
             self._generate_function_call_object(self._data_class)
         ]
         model_settings["function_call"] = {"name": function_name}
+        if not instruction:
+            instruction = self._data_class.__doc__.strip()
+
+        system_instruction = ""
+        if not instruction.startswith(f"{self._data_class.__name__}("):
+            system_instruction = f"Also note that: {instruction}\n\n"
+
         return OpenAIPrompt(
             model_settings,
             messages=[
@@ -134,7 +154,7 @@ class OpenAIModel(BaseAIClass):
                     "content": "The user will provide text that you need to parse into a structured form.\n"
                     f"To validate your response, you must call the `{function_name}` function.\n"
                     "Use the provided text and context to extract, deduce, or infer\n"
-                    f"any parameters needed by `{function_name}`, including any missing data.\n\n"
+                    f"any parameters needed by `{function_name}`, including any missing data.\n\n{system_instruction}"
                     "You have been provided the following context to perform your task:\n"
                     f"    - The current time is {datetime.datetime.now()}.",
                 },
@@ -183,7 +203,9 @@ class OpenAIEnum(BaseAIClass):
 
         return list(self._data_class)
 
-    def _generate_prompt(self, value: str, model_settings: dict) -> PromptBase:
+    def _generate_prompt(
+        self, value: str, model_settings: dict, instruction: Optional[str] = None
+    ) -> PromptBase:
         enum_options = self._get_enum_options()
         encoding = tiktoken.get_encoding("cl100k_base")
         model_settings["logit_bias"] = {
@@ -191,7 +213,9 @@ class OpenAIEnum(BaseAIClass):
             for idx in range(1, len(enum_options) + 1)
         }
         system_prompt = "You are an expert classifier that always chooses correctly\n\n"
-        instruction = self._data_class.__doc__.strip()
+
+        if not instruction:
+            instruction = self._data_class.__doc__.strip()
         if instruction != "An enumeration.":
             system_prompt += f"Also note that:\n{instruction}\n\n"
 

@@ -2,6 +2,7 @@
 Supported data classes as a base of AI Models
 """
 import dataclasses
+import datetime
 import typing
 from typing import Type
 
@@ -39,11 +40,35 @@ class NativeDataClass(BaseSupportedDataClass):
         if param_type == str:
             return {"type": "string"}
 
+        if param_type == datetime.date:
+            return {"type": "string", "format": "date"}
+
+        if param_type == datetime.datetime:
+            return {"type": "string", "format": "date"}
+
+        if param_type == datetime.time:
+            return {"type": "string", "format": "time"}
+
+        if param_type == datetime.timedelta:
+            return {"type": "string", "format": "duration"}
+
+        if typing.get_origin(param_type) == typing.Optional:
+            base_type_args = cls._get_type_args(typing.get_args(param_type)[0])
+            base_type = base_type_args["type"]
+            if isinstance(base_type, list):
+                base_type.append("null")
+            if isinstance(base_type, str):
+                base_type_args["type"] = [base_type, "null"]
+
+            return base_type_args
+
         if typing.get_origin(param_type) == list:
+            generic_type = None
+            if typing.get_args(param_type):
+                generic_type = cls._get_type_args(typing.get_args(param_type)[0])
             return {
                 "type": "array",
-                "items": cls._get_type_args(typing.get_args(param_type)[0])
-                or {"type": "string"},
+                "items": generic_type or {"type": "string"},
             }
         if typing.get_origin(param_type) == typing.Literal:
             options = typing.get_args(param_type)

@@ -4,6 +4,7 @@ Implementation of AI classes
 import dataclasses
 import datetime
 import json
+import logging
 from enum import Enum
 from typing import Type, Optional
 
@@ -119,6 +120,37 @@ class OpenAIModel(BaseAIClass):
 
         raise ValueError(f"Unsupported data class: {data_class}")
 
+    def _convert_date_related_fields(self, arguments: dict) -> dict:
+        """
+        Convert fields that are date, datetime, time or timedelta to native python values
+        """
+        function_call_object = self._generate_function_call_object(self._data_class)
+
+        conversion_functions = {
+            "date": datetime.date.fromisoformat,
+            "date-time": datetime.datetime.fromisoformat,
+            "time": datetime.time.fromisoformat,
+        }
+
+        for parameter_name, parameter_details in (
+            function_call_object["parameters"].get("properties", {}).items()
+        ):
+            parameter_value = arguments[parameter_name]
+            parameter_format = parameter_details.get("format")
+            if not parameter_format or not parameter_value:
+                continue
+
+            for format_name, conversion_function in conversion_functions.items():
+                if parameter_format == format_name:
+                    try:
+                        arguments[parameter_name] = conversion_function(parameter_value)
+                    except ValueError:
+                        logging.error(
+                            f"Found invalid {format_name} value: {parameter_value}"
+                        )
+
+        return arguments
+
     def _create_instance_from_response(self, llm_response):
         function_call_response = llm_response.choices[0].message.function_call
         function_name = "format_response"
@@ -126,6 +158,8 @@ class OpenAIModel(BaseAIClass):
             raise RuntimeError(f"LLM did not call function '{function_name}'")
 
         arguments = json.loads(function_call_response.arguments)
+        arguments = self._convert_date_related_fields(arguments)
+
         return self._data_class(**arguments)
 
     def _generate_prompt(
@@ -170,6 +204,14 @@ class OpenAIEnum(BaseAIClass):
 
     def __str__(self):
         return f"OpenAIEnum: {self._data_class.__name__}"
+
+    def __getattr__(self, item):
+        if hasattr(self._data_class, item):
+            return getattr(self._data_class, item)
+
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{item}'"
+        )
 
     def _create_instance_from_response(self, llm_response):
         content = llm_response.choices[0].message.content

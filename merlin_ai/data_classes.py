@@ -41,18 +41,36 @@ class NativeDataClass(BaseSupportedDataClass):
             return {"type": "string"}
 
         if param_type == datetime.date:
-            return {"type": "string", "format": "date"}
+            return {
+                "type": "string",
+                "format": "date",
+                "description": "Value must be in YYYY-MM-DD format.",
+            }
 
         if param_type == datetime.datetime:
-            return {"type": "string", "format": "date"}
+            return {
+                "type": "string",
+                "format": "date-time",
+                "description": "Value must be in YYYY-MM-DD HH:mm format.",
+            }
 
         if param_type == datetime.time:
-            return {"type": "string", "format": "time"}
+            return {
+                "type": "string",
+                "format": "time",
+                "description": "Value must be in HH:mm format.",
+            }
 
         if param_type == datetime.timedelta:
-            return {"type": "string", "format": "duration"}
+            return {
+                "type": "string",
+                "format": "duration",
+                "description": "Value must be in HH:mm format.",
+            }
 
-        if typing.get_origin(param_type) == typing.Optional:
+        if typing.get_origin(param_type) == typing.Union and type(
+            None
+        ) in typing.get_args(param_type):
             base_type_args = cls._get_type_args(typing.get_args(param_type)[0])
             base_type = base_type_args["type"]
             if isinstance(base_type, list):
@@ -91,7 +109,11 @@ class NativeDataClass(BaseSupportedDataClass):
 
             description = field.metadata.get("description")
             if description:
-                field_property["description"] = description
+                existing_description = field_property.get("description")
+                if existing_description:
+                    field_property[
+                        "description"
+                    ] = f"{existing_description} {field.metadata['description']}"
 
             properties[field.name] = field_property
 

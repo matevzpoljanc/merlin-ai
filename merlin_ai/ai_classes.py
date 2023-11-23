@@ -1,18 +1,20 @@
 """
 Implementation of AI classes
 """
-import dataclasses
 import datetime
 import json
 import logging
-from enum import Enum
-from typing import Type, Optional
+from typing import Optional
 
 import tiktoken
 
-from merlin_ai.data_classes import NativeDataClass
 from merlin_ai.llm_classes import PromptBase, OpenAIPrompt
 from merlin_ai.settings import default_model_settings
+from merlin_ai.model_config import (
+    ModelConfigBase,
+    ModelFromParams,
+    ModelFromDataClass
+)
 
 
 class BaseAIClass:
@@ -20,9 +22,8 @@ class BaseAIClass:
     Base class for AI classes
     """
 
-    def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
-        self._data_class = data_class
-        self._model_settings = model_settings
+    def __init__(self, model_config: ModelConfigBase):
+        self._model_config = model_config
 
     def as_prompt(
         self,
@@ -60,8 +61,8 @@ class BaseAIClass:
         Get LLM settings
         """
         settings = default_model_settings
-        if self._model_settings:
-            settings.update(self._model_settings)
+        if self._model_config.model_settings:
+            settings.update(self._model_config.model_settings)
         if function_call_model_settings:
             settings.update(function_call_model_settings)
 
@@ -88,6 +89,9 @@ class BaseAIClass:
         :param return_raw_response: if True raw response from LLM API will be returned alongside the AIModel instance
         :return: instance of data class
         """
+        if not isinstance(self._model_config, ModelFromDataClass):
+            raise Exception("This model is not callable.")
+
         llm_settings = self._get_llm_settings(model_settings)
 
         prompt = self._generate_prompt(
@@ -108,23 +112,13 @@ class OpenAIModel(BaseAIClass):
     """
 
     def __str__(self):
-        return f"OpenAIModel: {self._data_class.__name__}"
-
-    @staticmethod
-    def _generate_function_call_object(data_class: Type) -> dict:
-        """
-        Generate function call object from data class
-        """
-        if dataclasses.is_dataclass(data_class):
-            return NativeDataClass(data_class).generate_format_function_call_object()
-
-        raise ValueError(f"Unsupported data class: {data_class}")
+        return f"OpenAIModel: {self._model_config.get_name()}"
 
     def _convert_date_related_fields(self, arguments: dict) -> dict:
         """
         Convert fields that are date, datetime, time or timedelta to native python values
         """
-        function_call_object = self._generate_function_call_object(self._data_class)
+        function_call_object = self._model_config.generate_function_call_object()
 
         conversion_functions = {
             "date": datetime.date.fromisoformat,
@@ -152,6 +146,9 @@ class OpenAIModel(BaseAIClass):
         return arguments
 
     def _create_instance_from_response(self, llm_response):
+        if not isinstance(self._model_config, ModelFromDataClass):
+            raise Exception("Unable to instantiate the response from this model.")
+
         function_call_response = llm_response.choices[0].message.function_call
         function_name = "format_response"
         if not function_call_response or function_call_response.name != function_name:
@@ -160,7 +157,17 @@ class OpenAIModel(BaseAIClass):
         arguments = json.loads(function_call_response.arguments)
         arguments = self._convert_date_related_fields(arguments)
 
-        return self._data_class(**arguments)
+        return self._model_config.data_class(**arguments)
+
+    @classmethod
+    def create_from_params(cls, name: str, description: Optional[str], properties: dict, model_settings: dict,
+                           instruction: Optional[str] = None):
+        params = {"name": name, "properties": properties}
+        if description:
+            params["description"] = description
+        if instruction:
+            params["instruction"] = instruction
+        return cls(ModelFromParams(params, model_settings))
 
     def _generate_prompt(
         self,
@@ -170,14 +177,14 @@ class OpenAIModel(BaseAIClass):
     ) -> PromptBase:
         function_name = "format_response"
         model_settings["functions"] = [
-            self._generate_function_call_object(self._data_class)
+            self._model_config.generate_function_call_object()
         ]
         model_settings["function_call"] = {"name": function_name}
         if not instruction:
-            instruction = self._data_class.__doc__.strip()
+            instruction = self._model_config.get_instruction()
 
         system_instruction = ""
-        if not instruction.startswith(f"{self._data_class.__name__}("):
+        if not instruction.startswith(f"{self._model_config.get_name()}("):
             system_instruction = f"Also note that: {instruction}\n\n"
 
         return OpenAIPrompt(
@@ -203,19 +210,14 @@ class OpenAIEnum(BaseAIClass):
     """
 
     def __str__(self):
-        return f"OpenAIEnum: {self._data_class.__name__}"
+        return f"OpenAIEnum: {self._model_config.get_name()}"
 
-    def __getattr__(self, item):
-        if hasattr(self._data_class, item):
-            return getattr(self._data_class, item)
-
-        raise AttributeError(
-            f"'{type(self).__name__}' object has no attribute '{item}'"
-        )
+    def ___getattr__(self, item):
+        return self._model_config.get_attr(item)
 
     def _create_instance_from_response(self, llm_response):
         content = llm_response.choices[0].message.content
-        enum_options = self._get_enum_options()
+        enum_options = self._model_config.get_enum_options()
 
         try:
             enum_option_index = int(content)
@@ -236,29 +238,28 @@ class OpenAIEnum(BaseAIClass):
         settings["max_tokens"] = 1
         return settings
 
-    def _get_enum_options(self) -> list:
-        """
-        Get enum options.
-        """
-        if not issubclass(self._data_class, Enum):
-            raise ValueError(f"{self._data_class} is not an Enum")
-
-        return list(self._data_class)
+    @classmethod
+    def create_from_params(cls, name: str, classes: list[str], model_settings: dict, instruction: Optional[str] = None):
+        params = {"name": name, "classes": classes}
+        if instruction is not None:
+            params["instruction"] = instruction
+        return cls(ModelFromParams(params, model_settings))
 
     def _generate_prompt(
         self, value: str, model_settings: dict, instruction: Optional[str] = None
     ) -> PromptBase:
-        enum_options = self._get_enum_options()
+        enum_options = self._model_config.get_enum_options()
         encoding = tiktoken.get_encoding("cl100k_base")
         model_settings["logit_bias"] = {
             str(encoding.encode(str(idx))[0]): 100
             for idx in range(1, len(enum_options) + 1)
         }
+
         system_prompt = "You are an expert classifier that always chooses correctly\n\n"
 
         if not instruction:
-            instruction = self._data_class.__doc__.strip()
-        if instruction != "An enumeration.":
+            instruction = self._model_config.get_instruction()
+        if instruction:
             system_prompt += f"Also note that:\n{instruction}\n\n"
 
         system_prompt += (
@@ -266,7 +267,7 @@ class OpenAIEnum(BaseAIClass):
             "to choose the best option below based on it:\n"
             + "\n".join(
                 [
-                    f"\t{idx+1}. {option.name} ({idx+1})"
+                    f"\t{idx+1}. {option} ({idx+1})"
                     for idx, option in enumerate(enum_options)
                 ]
             )

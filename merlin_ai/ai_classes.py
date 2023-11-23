@@ -212,8 +212,13 @@ class OpenAIEnum(BaseAIClass):
     def __str__(self):
         return f"OpenAIEnum: {self._model_config.get_name()}"
 
-    def ___getattr__(self, item):
-        return self._model_config.get_attr(item)
+    def __getattr__(self, item):
+        if isinstance(self._model_config, ModelFromDataClass):
+            if hasattr(self._model_config.data_class, item):
+                return getattr(self._model_config.data_class, item)
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{item}'"
+        )
 
     def _create_instance_from_response(self, llm_response):
         content = llm_response.choices[0].message.content

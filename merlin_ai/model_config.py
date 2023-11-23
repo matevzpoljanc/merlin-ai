@@ -1,6 +1,9 @@
+"""
+Implementation of model config/init classes
+"""
+import dataclasses
 from typing import Type, Optional, Any
 from merlin_ai.data_classes import NativeDataClass
-import dataclasses
 
 
 class ModelConfigBase:
@@ -17,9 +20,6 @@ class ModelConfigBase:
         raise NotImplementedError
 
     def get_enum_options(self) -> list[str]:
-        raise NotImplementedError
-
-    def get_attr(self, item_name: str) -> Any:
         raise NotImplementedError
 
 
@@ -60,12 +60,6 @@ class ModelFromParams(ModelConfigBase):
             return classes
         raise ValueError("Classes were not specified for this model.")
 
-    def get_attr(self, item_name: str) -> Any:
-        val = self.model_params.get(item_name)
-        if val:
-            return val
-        raise AttributeError(f"This model has no attribute '{item_name}'")
-
 
 class ModelFromDataClass(ModelConfigBase):
     def __init__(self, data_class: Type, model_settings: dict):
@@ -83,8 +77,3 @@ class ModelFromDataClass(ModelConfigBase):
 
     def get_name(self) -> str:
         return self.data_class.__name__
-
-    def get_attr(self, item_name: str) -> Any:
-        if hasattr(self.data_class, item_name):
-            return getattr(self.data_class, item_name)
-        raise AttributeError(f"This model has no attribute '{item_name}'")

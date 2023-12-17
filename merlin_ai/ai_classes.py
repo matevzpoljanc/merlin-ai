@@ -67,7 +67,7 @@ class BaseAIClass:
 
         return {key: value for key, value in settings.items() if value is not None}
 
-    def _create_instance_from_response(self, llm_response):
+    def create_instance_from_response(self, llm_response):
         """
         Create base class instance from LLM response
         """
@@ -95,7 +95,7 @@ class BaseAIClass:
         )
         response = prompt.get_llm_response()
 
-        instance = self._create_instance_from_response(response)
+        instance = self.create_instance_from_response(response)
         if return_raw_response:
             return instance, response
 
@@ -151,7 +151,7 @@ class OpenAIModel(BaseAIClass):
 
         return arguments
 
-    def _create_instance_from_response(self, llm_response):
+    def create_instance_from_response(self, llm_response):
         function_call_response = llm_response.choices[0].message.function_call
         function_name = "format_response"
         if not function_call_response or function_call_response.name != function_name:
@@ -213,7 +213,7 @@ class OpenAIEnum(BaseAIClass):
             f"'{type(self).__name__}' object has no attribute '{item}'"
         )
 
-    def _create_instance_from_response(self, llm_response):
+    def create_instance_from_response(self, llm_response):
         content = llm_response.choices[0].message.content
         enum_options = self._get_enum_options()
 

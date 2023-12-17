@@ -24,7 +24,7 @@ class BaseSupportedDataClass:
 
 class NativeDataClass(BaseSupportedDataClass):
     """
-    Support for python's native Data
+    Support for python's native Dataclass
     """
 
     def __init__(self, data_type):

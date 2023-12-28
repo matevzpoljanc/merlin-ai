@@ -6,7 +6,7 @@ import datetime
 import json
 import logging
 from enum import Enum
-from typing import Type, Optional
+from typing import Type, Optional, Union
 
 import tiktoken
 
@@ -23,6 +23,12 @@ class BaseAIClass:
     def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
         self._data_class = data_class
         self._model_settings = model_settings
+
+    def from_json(self, data: Union[dict, int, str]):
+        """
+        Return instance of data class from dict
+        """
+        raise NotImplementedError()
 
     def as_prompt(
         self,
@@ -109,6 +115,10 @@ class OpenAIModel(BaseAIClass):
 
     def __str__(self):
         return f"OpenAIModel: {self._data_class.__name__}"
+
+    def from_json(self, data: Union[dict, int, str]):
+        arguments = self._convert_date_related_fields(data)
+        return self._data_class(**arguments)
 
     @staticmethod
     def _generate_function_call_object(data_class: Type) -> dict:
@@ -201,6 +211,15 @@ class OpenAIEnum(BaseAIClass):
     """
     OpenAI-based AI Enum
     """
+
+    def from_json(self, data: Union[dict, int, str]):
+        enum_options = self._get_enum_options()
+
+        for option in enum_options:
+            if option.value == data:
+                return option
+
+        raise ValueError(f"Invalid value {data}")
 
     def __str__(self):
         return f"OpenAIEnum: {self._data_class.__name__}"

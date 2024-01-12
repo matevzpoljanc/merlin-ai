@@ -60,11 +60,12 @@ class BaseAIClass:
         """
         raise NotImplementedError()
 
-    def _get_llm_settings(
-        self, function_call_model_settings: Optional[dict] = None
+    def _get_base_llm_settings(
+        self,
+        function_call_model_settings: Optional[dict] = None
     ) -> dict:
         """
-        Get LLM settings
+        Get base LLM settings
         """
         settings = default_model_settings
         if self._model_settings:
@@ -73,6 +74,14 @@ class BaseAIClass:
             settings.update(function_call_model_settings)
 
         return {key: value for key, value in settings.items() if value is not None}
+
+    def _get_llm_settings(
+        self, function_call_model_settings: Optional[dict] = None
+    ) -> dict:
+        """
+        Get LLM settings
+        """
+        return self._get_base_llm_settings(function_call_model_settings)
 
     def create_instance_from_response(self, llm_response):
         """
@@ -302,8 +311,6 @@ class OpenAIEnum(BaseAIClass):
                 {"role": "user", "content": f"The text to classify:\n{value}"},
             ],
         )
-    
-# DIFF HERE
 
 
 class OpenAIEnumExplained(OpenAIEnum):
@@ -321,29 +328,11 @@ class OpenAIEnumExplained(OpenAIEnum):
         data_class_wrapper = dataclasses.make_dataclass(f"{data_class.__name__}_wrapper", fields)
         if data_class.__doc__:
             data_class_wrapper.__doc__ = data_class.__doc__
-        # print(">> " + str(OpenAIModel(data_class_wrapper).as_prompt("test")))
         self._data_class_wrapper = data_class_wrapper
-
-    # def from_json(self, data: Union[dict, int, str]):
-    #     enum_options = self._get_enum_options()
-    #
-    #     for option in enum_options:
-    #         if option.value == data:
-    #             return option
-    #
-    #     raise ValueError(f"Invalid value {data}")
 
     def __str__(self):
         return f"OpenAIEnumExplained: {self._data_class.__name__}"
 
-    # def __getattr__(self, item):
-    #     if hasattr(self._data_class, item):
-    #         return getattr(self._data_class, item)
-    #
-    #     raise AttributeError(
-    #         f"'{type(self).__name__}' object has no attribute '{item}'"
-    #     )
-    #
     def create_instance_from_response(self, llm_response):
         content = json.loads(llm_response.choices[0].message.function_call.arguments)
         enum_options = self._get_enum_options()
@@ -352,24 +341,13 @@ class OpenAIEnumExplained(OpenAIEnum):
             if option.name == content["category"]:
                 return option
 
-        raise RuntimeError(f"LLM returned invalid value {content.category}")
+        raise RuntimeError(f"LLM returned invalid value {content['category']}")
 
-    def _get_llm_settings(  # TODO: create OpenAIEnumBase class to avoid doing this "undo" here
+    def _get_llm_settings(
         self, function_call_model_settings: Optional[dict] = None
     ) -> dict:
-        settings = super()._get_llm_settings(function_call_model_settings)
-        settings["max_tokens"] = 1500  # WARNME
-        return settings
+        return self._get_base_llm_settings(function_call_model_settings)
 
-    # def _get_enum_options(self) -> list:
-    #     """
-    #     Get enum options.
-    #     """
-    #     if not issubclass(self._data_class, Enum):
-    #         raise ValueError(f"{self._data_class} is not an Enum")
-    #
-    #     return list(self._data_class)
-    #
     def _generate_prompt(
         self, value: str, model_settings: dict, instruction: Optional[str] = None
     ) -> PromptBase:
@@ -391,7 +369,7 @@ class OpenAIEnumExplained(OpenAIEnum):
             "to choose the best option below based on it:\n"
             + "\n".join(
                 [
-                    f"\t{idx+1}. {option.name} ({idx+1})"
+                    f"* {option.name}"
                     for idx, option in enumerate(enum_options)
                 ]
             )

@@ -14,6 +14,7 @@ import tiktoken
 from merlin_ai.data_classes import NativeDataClass
 from merlin_ai.llm_classes import PromptBase, OpenAIPrompt
 from merlin_ai.settings import default_model_settings
+from merlin_ai.types import DocEnum
 
 
 class BaseAIClass:
@@ -296,6 +297,7 @@ class OpenAIEnum(BaseAIClass):
             + "\n".join(
                 [
                     f"\t{idx+1}. {option.name} ({idx+1})"
+                    f"{' - ' + option.__doc__ if isinstance(option, DocEnum) and option.__doc__ else ''}"
                     for idx, option in enumerate(enum_options)
                 ]
             )
@@ -373,7 +375,7 @@ class OpenAIEnumModel(OpenAIEnum):
             "The following categories are available to choose from:\n"
             + "\n".join(
                 [
-                    f"* {option.name}"
+                    f"* {option.name}{' - ' + option.__doc__ if isinstance(option, DocEnum) and option.__doc__ else ''}"
                     for idx, option in enumerate(enum_options)
                 ]
             )

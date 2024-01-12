@@ -297,6 +297,7 @@ class OpenAIEnum(BaseAIClass):
             + "\n".join(
                 [
                     f"\t{idx+1}. {option.name} ({idx+1})"
+                    f"{' - ' + option.__doc__ if isinstance(option, DocEnum) and option.__doc__ else ''}"
                     for idx, option in enumerate(enum_options)
                 ]
             )

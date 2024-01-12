@@ -1,3 +1,6 @@
+"""
+Merlin AI types
+"""
 from enum import Enum
 
 

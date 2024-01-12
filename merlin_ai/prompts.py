@@ -11,7 +11,7 @@ from merlin_ai.data_classes import NativeDataClass
 from merlin_ai.types import DocEnum
 
 
-class OpenAISettings:
+class OpenAIPrompts:
     @staticmethod
     def generate_function_call_object(data_class: Type) -> dict:
         """
@@ -26,7 +26,7 @@ class OpenAISettings:
     def set_parser_settings(data_class: Type, model_settings: dict, function_name: Optional[str] = "format_response") \
             -> dict:
         model_settings["functions"] = [
-            OpenAISettings.generate_function_call_object(data_class)
+            OpenAIPrompts.generate_function_call_object(data_class)
         ]
         model_settings["function_call"] = {"name": function_name}
         return model_settings
@@ -40,8 +40,6 @@ class OpenAISettings:
         }
         return model_settings
 
-
-class OpenAIPrompts:
     @staticmethod
     def create_parser_prompt(data_class: Type, value: str, function_name: Optional[str] = "format_response",
                              instruction: Optional[str] = None) -> list[dict[str, str]]:
@@ -56,7 +54,8 @@ class OpenAIPrompts:
                         "content": "The user will provide text that you need to parse into a structured form.\n"
                         f"To validate your response, you must call the `{function_name}` function.\n"
                         "Use the provided text and context to extract, deduce, or infer\n"
-                        f"any parameters needed by `{function_name}`, including any missing data.\n\n{system_instruction}"
+                        f"any parameters needed by `{function_name}`, including any missing data."
+                        f"\n\n{system_instruction}"
                         "You have been provided the following context to perform your task:\n"
                         f"    - The current time is {datetime.now()}.",
                     },

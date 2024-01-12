@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Type, Optional, Union
 
 from merlin_ai.llm_classes import PromptBase, OpenAIPrompt
-from merlin_ai.prompts import OpenAIPrompts, OpenAISettings
+from merlin_ai.prompts import OpenAIPrompts
 from merlin_ai.settings import default_model_settings
 
 
@@ -132,7 +132,7 @@ class OpenAIModel(BaseAIClass):
         """
         Convert fields that are date, datetime, time or timedelta to native python values
         """
-        function_call_object = OpenAISettings.generate_function_call_object(self._data_class)
+        function_call_object = OpenAIPrompts.generate_function_call_object(self._data_class)
 
         conversion_functions = {
             "date": datetime.date.fromisoformat,
@@ -177,7 +177,7 @@ class OpenAIModel(BaseAIClass):
         instruction: Optional[str] = None,
     ) -> PromptBase:
         return OpenAIPrompt(
-            OpenAISettings.set_parser_settings(self._data_class, model_settings),
+            OpenAIPrompts.set_parser_settings(self._data_class, model_settings),
             OpenAIPrompts.create_parser_prompt(self._data_class, value, instruction=instruction)
         )
 
@@ -244,7 +244,7 @@ class OpenAIEnum(BaseAIClass):
     ) -> PromptBase:
         enum_options = self._get_enum_options()
         return OpenAIPrompt(
-            OpenAISettings.set_classifier_settings(enum_options, model_settings),
+            OpenAIPrompts.set_classifier_settings(enum_options, model_settings),
             OpenAIPrompts.create_classifier_prompt(self._data_class, enum_options, value, instruction)
         )
 
@@ -288,6 +288,6 @@ class OpenAIEnumExplained(OpenAIEnum):
         self, value: str, model_settings: dict, instruction: Optional[str] = None
     ) -> PromptBase:
         return OpenAIPrompt(
-            OpenAISettings.set_parser_settings(self._data_class_wrapper, model_settings),
+            OpenAIPrompts.set_parser_settings(self._data_class_wrapper, model_settings),
             OpenAIPrompts.create_classifier_prompt(self._data_class, self._get_enum_options(), value, instruction)
         )

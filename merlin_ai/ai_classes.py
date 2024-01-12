@@ -131,7 +131,7 @@ class OpenAIModel(BaseAIClass):
         return self._data_class(**arguments)
 
     @staticmethod
-    def _generate_function_call_object(data_class: Type) -> dict:
+    def generate_function_call_object(data_class: Type) -> dict:
         """
         Generate function call object from data class
         """
@@ -144,7 +144,7 @@ class OpenAIModel(BaseAIClass):
         """
         Convert fields that are date, datetime, time or timedelta to native python values
         """
-        function_call_object = self._generate_function_call_object(self._data_class)
+        function_call_object = self.generate_function_call_object(self._data_class)
 
         conversion_functions = {
             "date": datetime.date.fromisoformat,
@@ -190,7 +190,7 @@ class OpenAIModel(BaseAIClass):
     ) -> PromptBase:
         function_name = "format_response"
         model_settings["functions"] = [
-            self._generate_function_call_object(self._data_class)
+            self.generate_function_call_object(self._data_class)
         ]
         model_settings["function_call"] = {"name": function_name}
         if not instruction:
@@ -353,7 +353,7 @@ class OpenAIEnumExplained(OpenAIEnum):
     ) -> PromptBase:
         function_name = "format_response"
         model_settings["functions"] = [
-            OpenAIModel._generate_function_call_object(self._data_class_wrapper)  # WARNME: private function
+            OpenAIModel.generate_function_call_object(self._data_class_wrapper)
         ]
         model_settings["function_call"] = {"name": function_name}
 

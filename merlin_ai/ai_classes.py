@@ -5,6 +5,7 @@ import dataclasses
 import datetime
 import json
 import logging
+from dataclasses import field
 from enum import Enum
 from typing import Type, Optional, Union
 
@@ -275,6 +276,111 @@ class OpenAIEnum(BaseAIClass):
         }
         system_prompt = "You are an expert classifier that always chooses correctly\n\n"
 
+        if not instruction:
+            instruction = self._data_class.__doc__.strip()
+        if instruction != "An enumeration.":
+            system_prompt += f"Also note that:\n{instruction}\n\n"
+
+        system_prompt += (
+            "The user will provide text to classify, you will use your expertise "
+            "to choose the best option below based on it:\n"
+            + "\n".join(
+                [
+                    f"\t{idx+1}. {option.name} ({idx+1})"
+                    for idx, option in enumerate(enum_options)
+                ]
+            )
+        )
+
+        return OpenAIPrompt(
+            model_settings,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {"role": "user", "content": f"The text to classify:\n{value}"},
+            ],
+        )
+    
+# DIFF HERE
+
+
+class OpenAIEnumExplained(OpenAIEnum):
+    """
+    OpenAI-based AI Enum with explanation
+    """
+
+    def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
+        super().__init__(data_class, model_settings)
+        fields = [("category", data_class,
+                   field(metadata={"description": data_class.__doc__} if data_class.__doc__ else None)),
+                  ("explanation", str,
+                   field(metadata={"description": "Explain your categorization in a short and concise manner."}))
+                  ]
+        data_class_wrapper = dataclasses.make_dataclass(f"{data_class.__name__}_wrapper", fields)
+        if data_class.__doc__:
+            data_class_wrapper.__doc__ = data_class.__doc__
+        # print(">> " + str(OpenAIModel(data_class_wrapper).as_prompt("test")))
+        self._data_class_wrapper = data_class_wrapper
+
+    # def from_json(self, data: Union[dict, int, str]):
+    #     enum_options = self._get_enum_options()
+    #
+    #     for option in enum_options:
+    #         if option.value == data:
+    #             return option
+    #
+    #     raise ValueError(f"Invalid value {data}")
+
+    def __str__(self):
+        return f"OpenAIEnumExplained: {self._data_class.__name__}"
+
+    # def __getattr__(self, item):
+    #     if hasattr(self._data_class, item):
+    #         return getattr(self._data_class, item)
+    #
+    #     raise AttributeError(
+    #         f"'{type(self).__name__}' object has no attribute '{item}'"
+    #     )
+    #
+    def create_instance_from_response(self, llm_response):
+        content = json.loads(llm_response.choices[0].message.function_call.arguments)
+        enum_options = self._get_enum_options()
+
+        for option in enum_options:
+            if option.name == content["category"]:
+                return option
+
+        raise RuntimeError(f"LLM returned invalid value {content.category}")
+
+    def _get_llm_settings(  # TODO: create OpenAIEnumBase class to avoid doing this "undo" here
+        self, function_call_model_settings: Optional[dict] = None
+    ) -> dict:
+        settings = super()._get_llm_settings(function_call_model_settings)
+        settings["max_tokens"] = 1500  # WARNME
+        return settings
+
+    # def _get_enum_options(self) -> list:
+    #     """
+    #     Get enum options.
+    #     """
+    #     if not issubclass(self._data_class, Enum):
+    #         raise ValueError(f"{self._data_class} is not an Enum")
+    #
+    #     return list(self._data_class)
+    #
+    def _generate_prompt(
+        self, value: str, model_settings: dict, instruction: Optional[str] = None
+    ) -> PromptBase:
+        function_name = "format_response"
+        model_settings["functions"] = [
+            OpenAIModel._generate_function_call_object(self._data_class_wrapper)  # WARNME: private function
+        ]
+        model_settings["function_call"] = {"name": function_name}
+
+        enum_options = self._get_enum_options()
+        system_prompt = "You are an expert classifier that always chooses correctly\n\n"
         if not instruction:
             instruction = self._data_class.__doc__.strip()
         if instruction != "An enumeration.":

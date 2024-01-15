@@ -315,7 +315,7 @@ class OpenAIEnum(BaseAIClass):
 
 class OpenAIEnumExplained(OpenAIEnum):
     """
-    OpenAI-based AI Enum with explanation
+    OpenAI-based AI Enum implemented as a model (parser)
     """
 
     def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
@@ -366,7 +366,11 @@ class OpenAIEnumExplained(OpenAIEnum):
 
         system_prompt += (
             "The user will provide text to classify, you will use your expertise "
-            "to choose the best option below based on it:\n"
+            "to choose the best category below based on it.\n"
+            f"To submit your categorization result, you must call the `{function_name}` function.\n"
+            "Use the provided text and context to infer the category and explanation "
+            f"needed to call `{function_name}`.\n"
+            "The following categories are available to choose from:\n"
             + "\n".join(
                 [
                     f"* {option.name}"

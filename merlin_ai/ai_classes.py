@@ -5,6 +5,7 @@ import dataclasses
 import datetime
 import json
 import logging
+from dataclasses import field
 from enum import Enum
 from typing import Type, Optional, Union
 
@@ -59,11 +60,12 @@ class BaseAIClass:
         """
         raise NotImplementedError()
 
-    def _get_llm_settings(
-        self, function_call_model_settings: Optional[dict] = None
+    def _get_base_llm_settings(
+        self,
+        function_call_model_settings: Optional[dict] = None
     ) -> dict:
         """
-        Get LLM settings
+        Get base LLM settings
         """
         settings = default_model_settings
         if self._model_settings:
@@ -72,6 +74,14 @@ class BaseAIClass:
             settings.update(function_call_model_settings)
 
         return {key: value for key, value in settings.items() if value is not None}
+
+    def _get_llm_settings(
+        self, function_call_model_settings: Optional[dict] = None
+    ) -> dict:
+        """
+        Get LLM settings
+        """
+        return self._get_base_llm_settings(function_call_model_settings)
 
     def create_instance_from_response(self, llm_response):
         """
@@ -121,7 +131,7 @@ class OpenAIModel(BaseAIClass):
         return self._data_class(**arguments)
 
     @staticmethod
-    def _generate_function_call_object(data_class: Type) -> dict:
+    def generate_function_call_object(data_class: Type) -> dict:
         """
         Generate function call object from data class
         """
@@ -134,7 +144,7 @@ class OpenAIModel(BaseAIClass):
         """
         Convert fields that are date, datetime, time or timedelta to native python values
         """
-        function_call_object = self._generate_function_call_object(self._data_class)
+        function_call_object = self.generate_function_call_object(self._data_class)
 
         conversion_functions = {
             "date": datetime.date.fromisoformat,
@@ -180,7 +190,7 @@ class OpenAIModel(BaseAIClass):
     ) -> PromptBase:
         function_name = "format_response"
         model_settings["functions"] = [
-            self._generate_function_call_object(self._data_class)
+            self.generate_function_call_object(self._data_class)
         ]
         model_settings["function_call"] = {"name": function_name}
         if not instruction:
@@ -286,6 +296,84 @@ class OpenAIEnum(BaseAIClass):
             + "\n".join(
                 [
                     f"\t{idx+1}. {option.name} ({idx+1})"
+                    for idx, option in enumerate(enum_options)
+                ]
+            )
+        )
+
+        return OpenAIPrompt(
+            model_settings,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {"role": "user", "content": f"The text to classify:\n{value}"},
+            ],
+        )
+
+
+class OpenAIEnumModel(OpenAIEnum):
+    """
+    OpenAI-based AI Enum implemented as a model (parser)
+    """
+
+    def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
+        super().__init__(data_class, model_settings)
+        fields = [("category", data_class,
+                   field(metadata={"description": data_class.__doc__} if data_class.__doc__ else None)),
+                  ("explanation", str,
+                   field(metadata={"description": "Explain your categorization in a short and concise manner."}))
+                  ]
+        data_class_wrapper = dataclasses.make_dataclass(f"{data_class.__name__}_wrapper", fields)
+        if data_class.__doc__:
+            data_class_wrapper.__doc__ = data_class.__doc__
+        self._data_class_wrapper = data_class_wrapper
+
+    def __str__(self):
+        return f"OpenAIEnumExplained: {self._data_class.__name__}"
+
+    def create_instance_from_response(self, llm_response):
+        content = json.loads(llm_response.choices[0].message.function_call.arguments)
+        enum_options = self._get_enum_options()
+
+        for option in enum_options:
+            if option.name == content["category"]:
+                return option
+
+        raise RuntimeError(f"LLM returned invalid value {content['category']}")
+
+    def _get_llm_settings(
+        self, function_call_model_settings: Optional[dict] = None
+    ) -> dict:
+        return self._get_base_llm_settings(function_call_model_settings)
+
+    def _generate_prompt(
+        self, value: str, model_settings: dict, instruction: Optional[str] = None
+    ) -> PromptBase:
+        function_name = "format_response"
+        model_settings["functions"] = [
+            OpenAIModel.generate_function_call_object(self._data_class_wrapper)
+        ]
+        model_settings["function_call"] = {"name": function_name}
+
+        enum_options = self._get_enum_options()
+        system_prompt = "You are an expert classifier that always chooses correctly\n\n"
+        if not instruction:
+            instruction = self._data_class.__doc__.strip()
+        if instruction != "An enumeration.":
+            system_prompt += f"Also note that:\n{instruction}\n\n"
+
+        system_prompt += (
+            "The user will provide text to classify, you will use your expertise "
+            "to choose the best category below based on it.\n"
+            f"To submit your categorization result, you must call the `{function_name}` function.\n"
+            "Use the provided text and context to infer the category and explanation "
+            f"needed to call `{function_name}`.\n"
+            "The following categories are available to choose from:\n"
+            + "\n".join(
+                [
+                    f"* {option.name}"
                     for idx, option in enumerate(enum_options)
                 ]
             )

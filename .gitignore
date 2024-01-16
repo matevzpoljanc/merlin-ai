@@ -1,3 +1,5 @@
 temp
 .idea
 dist
+__pycache__
+*.bak

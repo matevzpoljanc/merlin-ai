@@ -3,6 +3,8 @@ Supported data classes as a base of AI Models
 """
 import dataclasses
 import datetime
+import enum
+import inspect
 import typing
 from typing import Type
 
@@ -67,6 +69,12 @@ class NativeDataClass(BaseSupportedDataClass):
                 "format": "duration",
                 "description": "Value must be in HH:mm format.",
             }
+
+        if inspect.isclass(param_type) and issubclass(param_type, enum.Enum):
+            options = param_type.__members__.keys()
+            type_args = cls._get_type_args(str)
+            type_args["enum"] = list(options)
+            return type_args
 
         if typing.get_origin(param_type) == typing.Union and type(
             None

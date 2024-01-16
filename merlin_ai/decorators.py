@@ -3,7 +3,7 @@ Decorators for AI classes
 """
 from typing import Type, Optional, Callable, Union
 
-from merlin_ai.ai_classes import OpenAIModel, BaseAIClass, OpenAIEnum, OpenAIEnumExplained
+from merlin_ai.ai_classes import OpenAIModel, BaseAIClass, OpenAIEnum, OpenAIEnumModel
 
 
 def decorator_generator(ai_class: Type[BaseAIClass]):
@@ -44,4 +44,4 @@ def decorator_generator(ai_class: Type[BaseAIClass]):
 
 ai_model = decorator_generator(OpenAIModel)
 ai_enum = decorator_generator(OpenAIEnum)
-ai_enum_ex = decorator_generator(OpenAIEnumExplained)
+ai_enum_model = decorator_generator(OpenAIEnumModel)

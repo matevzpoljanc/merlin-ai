@@ -313,7 +313,7 @@ class OpenAIEnum(BaseAIClass):
         )
 
 
-class OpenAIEnumExplained(OpenAIEnum):
+class OpenAIEnumModel(OpenAIEnum):
     """
     OpenAI-based AI Enum implemented as a model (parser)
     """

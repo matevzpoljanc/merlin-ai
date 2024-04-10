@@ -6,6 +6,8 @@ from typing import Optional
 
 import openai
 
+from merlin_ai.llm_client import MerlinChatCompletion
+
 
 class PromptBase:
     """
@@ -58,4 +60,5 @@ class OpenAIPrompt(PromptBase):
 
     def get_llm_response(self):
         openai.api_key = os.environ.get("OPENAI_API_KEY")
-        return openai.ChatCompletion.create(**self.as_dict())
+        return MerlinChatCompletion.create(**self.as_dict())
+        # return openai.ChatCompletion.create(**self.as_dict())

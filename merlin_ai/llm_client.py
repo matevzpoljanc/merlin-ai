@@ -2,7 +2,6 @@
 Merlin LLM API client
 """
 import json
-import os
 from typing import Optional, Any, Callable
 import time
 
@@ -11,7 +10,7 @@ from anthropic import Anthropic
 from anthropic.types.beta.tools import ToolParam, ToolsBetaMessageParam, ToolsBetaMessage
 from openai.util import convert_to_openai_object
 
-CLAUDE_CLASSIFIER_MAX_TOKENS = 1500
+CLAUDE_ENUM_MAX_TOKENS = 1500
 
 
 def _try_get(
@@ -33,7 +32,7 @@ class MerlinChatCompletion(openai.ChatCompletion):
 
     # pylint: disable=abstract-method
 
-    claude_api_key: str = None
+    anthropic_api_key: str = None
 
     @staticmethod
     def _create_claude_request(**openai_request) -> dict[str, Any]:
@@ -87,7 +86,7 @@ class MerlinChatCompletion(openai.ChatCompletion):
         ]
         return {
             "model": openai_request["model"],
-            "max_tokens": CLAUDE_CLASSIFIER_MAX_TOKENS
+            "max_tokens": CLAUDE_ENUM_MAX_TOKENS
             if is_enum
             else openai_request["max_tokens"],
             "system": system,
@@ -149,7 +148,7 @@ class MerlinChatCompletion(openai.ChatCompletion):
     @classmethod
     def _call_claude(cls, **kwargs):
         with Anthropic(
-            api_key=cls.claude_api_key or os.getenv("CLAUDE_API_KEY"),
+            api_key=cls.anthropic_api_key,
             default_headers={"anthropic-beta": "tools-2024-04-04"},
         ) as claude_client:
             claude_request = cls._create_claude_request(**kwargs)
@@ -163,7 +162,7 @@ class MerlinChatCompletion(openai.ChatCompletion):
         return (
             "model" in kwargs
             and kwargs["model"].startswith("claude-")
-            # and cls.claude_api_key
+            # and cls.anthropic_api_key
         )
 
     @classmethod

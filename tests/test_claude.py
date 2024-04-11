@@ -10,11 +10,12 @@ from merlin_ai.llm_client import MerlinChatCompletion
 
 load_dotenv()
 
+# set keys explicitly
 openai.api_key = os.getenv("OPENAI_API_KEY")
-MerlinChatCompletion.claude_api_key = os.getenv("CLAUDE_API_KEY")
+MerlinChatCompletion.anthropic_api_key = os.getenv("CLAUDE_API_KEY")
 
 
-@ai_enum(model="gpt-4")
+@ai_enum(model="claude-3-opus-20240229")
 class Color(Enum):
     """
     Colors
@@ -25,7 +26,7 @@ class Color(Enum):
     BLUE = "blue"
 
 
-@ai_model
+@ai_model(model="gpt-4")
 @dataclass
 class Email:
     """

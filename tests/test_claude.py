@@ -6,13 +6,15 @@ from merlin_ai import ai_enum, ai_model
 from dotenv import load_dotenv
 import openai
 
+from merlin_ai.llm_client import MerlinChatCompletion
+
 load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.api_base = "http://localhost:8000"
+MerlinChatCompletion.claude_api_key = os.getenv("CLAUDE_API_KEY")
 
 
-@ai_enum
+@ai_enum(model="gpt-4")
 class Color(Enum):
     """
     Colors
@@ -39,7 +41,9 @@ class Email:
 
 def merlin_classifier():
     print(f"Prompt: {Color.as_prompt('grass')}")
-    color, response = Color("grass", return_raw_response=True)  # you could also prompt "What is the color of grass?"
+    color, response = Color(
+        "grass", return_raw_response=True
+    )  # you could also prompt "What is the color of grass?"
     print(f"Raw response: {response}")
     print(f"Color: {color.value}")
 

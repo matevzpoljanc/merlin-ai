@@ -2,4 +2,5 @@ temp
 .idea
 dist
 __pycache__
-*.bak
+*.bak'
+.env

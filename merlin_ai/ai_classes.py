@@ -61,8 +61,7 @@ class BaseAIClass:
         raise NotImplementedError()
 
     def _get_base_llm_settings(
-        self,
-        function_call_model_settings: Optional[dict] = None
+        self, function_call_model_settings: Optional[dict] = None
     ) -> dict:
         """
         Get base LLM settings
@@ -320,12 +319,29 @@ class OpenAIEnumModel(OpenAIEnum):
 
     def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
         super().__init__(data_class, model_settings)
-        fields = [("category", data_class,
-                   field(metadata={"description": data_class.__doc__} if data_class.__doc__ else None)),
-                  ("explanation", str,
-                   field(metadata={"description": "Explain your categorization in a short and concise manner."}))
-                  ]
-        data_class_wrapper = dataclasses.make_dataclass(f"{data_class.__name__}_wrapper", fields)
+        fields = [
+            (
+                "category",
+                data_class,
+                field(
+                    metadata={"description": data_class.__doc__}
+                    if data_class.__doc__
+                    else None
+                ),
+            ),
+            (
+                "explanation",
+                str,
+                field(
+                    metadata={
+                        "description": "Explain your categorization in a short and concise manner."
+                    }
+                ),
+            ),
+        ]
+        data_class_wrapper = dataclasses.make_dataclass(
+            f"{data_class.__name__}_wrapper", fields
+        )
         if data_class.__doc__:
             data_class_wrapper.__doc__ = data_class.__doc__
         self._data_class_wrapper = data_class_wrapper
@@ -371,12 +387,7 @@ class OpenAIEnumModel(OpenAIEnum):
             "Use the provided text and context to infer the category and explanation "
             f"needed to call `{function_name}`.\n"
             "The following categories are available to choose from:\n"
-            + "\n".join(
-                [
-                    f"* {option.name}"
-                    for idx, option in enumerate(enum_options)
-                ]
-            )
+            + "\n".join([f"* {option.name}" for idx, option in enumerate(enum_options)])
         )
 
         return OpenAIPrompt(

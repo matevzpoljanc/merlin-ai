@@ -12,11 +12,12 @@ license = "MIT"
 python = "^3.9"
 openai = "^0.28.1"
 tiktoken = "^0.5.1"
-
+anthropic = "^0.25.0"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.2"
 black = "^23.10.1"
+load-dotenv = "^0.1.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -312,6 +312,16 @@ class OpenAIEnum(BaseAIClass):
         )
 
 
+class EnumModelResponse:
+    """
+    Enum model response
+    """
+
+    def __init__(self, category: Enum, explanation: str):
+        self.category = category
+        self.explanation = explanation
+
+
 class OpenAIEnumModel(OpenAIEnum):
     """
     OpenAI-based AI Enum implemented as a model (parser)
@@ -347,7 +357,7 @@ class OpenAIEnumModel(OpenAIEnum):
         self._data_class_wrapper = data_class_wrapper
 
     def __str__(self):
-        return f"OpenAIEnumExplained: {self._data_class.__name__}"
+        return f"OpenAIEnumModel: {self._data_class.__name__}"
 
     def create_instance_from_response(self, llm_response):
         content = json.loads(llm_response.choices[0].message.function_call.arguments)
@@ -355,7 +365,7 @@ class OpenAIEnumModel(OpenAIEnum):
 
         for option in enum_options:
             if option.name == content["category"]:
-                return option
+                return EnumModelResponse(option, content["explanation"])
 
         raise RuntimeError(f"LLM returned invalid value {content['category']}")
 

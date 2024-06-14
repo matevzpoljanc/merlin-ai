@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "merlin-ai"
-version = "0.3.0"
+version = "0.3.1"
 description = ""
 authors = ["Matevz Poljanc", "Miha Grcar"]
 readme = "README.md"

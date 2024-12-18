@@ -1,6 +1,7 @@
 """
 Implementation of AI classes
 """
+
 import dataclasses
 import datetime
 import json
@@ -188,10 +189,8 @@ class OpenAIModel(BaseAIClass):
         instruction: Optional[str] = None,
     ) -> PromptBase:
         function_name = "format_response"
-        model_settings["functions"] = [
-            self.generate_function_call_object(self._data_class)
-        ]
-        model_settings["function_call"] = {"name": function_name}
+        model_settings["tools"] = [self.generate_function_call_object(self._data_class)]
+        model_settings["tool_choice"] = {"name": function_name, "type": "tool"}
         if not instruction:
             instruction = self._data_class.__doc__.strip()
 
@@ -334,9 +333,11 @@ class OpenAIEnumModel(OpenAIEnum):
                 "category",
                 data_class,
                 field(
-                    metadata={"description": data_class.__doc__}
-                    if data_class.__doc__
-                    else None
+                    metadata=(
+                        {"description": data_class.__doc__}
+                        if data_class.__doc__
+                        else None
+                    )
                 ),
             ),
             (
@@ -378,10 +379,10 @@ class OpenAIEnumModel(OpenAIEnum):
         self, value: str, model_settings: dict, instruction: Optional[str] = None
     ) -> PromptBase:
         function_name = "format_response"
-        model_settings["functions"] = [
+        model_settings["tools"] = [
             OpenAIModel.generate_function_call_object(self._data_class_wrapper)
         ]
-        model_settings["function_call"] = {"name": function_name}
+        model_settings["tool_choice"] = {"name": function_name, "type": "tool"}
 
         enum_options = self._get_enum_options()
         system_prompt = "You are an expert classifier that always chooses correctly\n\n"

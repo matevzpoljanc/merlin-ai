@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "merlin-ai"
-version = "0.3.1"
+version = "1.0.0"
 description = ""
 authors = ["Matevz Poljanc", "Miha Grcar"]
 readme = "README.md"
@@ -10,9 +10,8 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-openai = "^0.28.1"
-tiktoken = "^0.5.1"
-anthropic = "^0.25.0"
+litellm = "^1.55.3"
+tiktoken = "^0.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.2"

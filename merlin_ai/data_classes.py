@@ -1,6 +1,7 @@
 """
 Supported data classes as a base of AI Models
 """
+
 import dataclasses
 import datetime
 import enum
@@ -9,7 +10,7 @@ import typing
 from typing import Type
 
 
-class BaseSupportedDataClass:
+class BaseSupportedDataClass:  # pylint: disable=too-few-public-methods
     """
     Base class
     """
@@ -24,7 +25,7 @@ class BaseSupportedDataClass:
         raise NotImplementedError()
 
 
-class NativeDataClass(BaseSupportedDataClass):
+class NativeDataClass(BaseSupportedDataClass):  # pylint: disable=too-few-public-methods
     """
     Support for python's native Dataclass
     """
@@ -35,6 +36,7 @@ class NativeDataClass(BaseSupportedDataClass):
             raise ValueError(f"{data_type} is not dataclass")
 
     @classmethod
+    # pylint: disable-next=too-many-return-statements
     def _get_type_args(cls, param_type: Type) -> dict:
         """
         Parameter type to args
@@ -96,7 +98,7 @@ class NativeDataClass(BaseSupportedDataClass):
                 "type": "array",
                 "items": generic_type or {"type": "string"},
             }
-        if typing.get_origin(param_type) == typing.Literal:
+        if typing.get_origin(param_type) is typing.Literal:
             options = typing.get_args(param_type)
             type_args = cls._get_type_args(type(options[0]))
             type_args["enum"] = list(options)
@@ -119,9 +121,9 @@ class NativeDataClass(BaseSupportedDataClass):
             if description:
                 existing_description = field_property.get("description")
                 if existing_description:
-                    field_property[
-                        "description"
-                    ] = f"{existing_description} {field.metadata['description']}"
+                    field_property["description"] = (
+                        f"{existing_description} {field.metadata['description']}"
+                    )
 
             properties[field.name] = field_property
 

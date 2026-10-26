@@ -1,3 +1,5 @@
+"""Public decorators and settings for Merlin AI models."""
+
 from .decorators import ai_enum, ai_model, ai_enum_model
 from .ai_classes import BaseAIClass
 from .settings import default_model_settings

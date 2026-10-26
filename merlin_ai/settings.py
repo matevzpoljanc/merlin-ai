@@ -2,7 +2,6 @@
 Merlin AI settings
 """
 
-
 default_model_settings = {
     "model": "gpt-3.5-turbo",
     "request_timeout": 600,

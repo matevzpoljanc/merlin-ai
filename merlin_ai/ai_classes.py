@@ -101,7 +101,8 @@ class BaseAIClass:
         :param value: user provided string from which to instantiate data class
         :param model_settings: settings for LLM model
         :param instruction: custom instruction to use when generating LLM prompt
-        :param return_raw_response: if True raw response from LLM API will be returned alongside the AIModel instance
+        :param return_raw_response: if True, return the raw LLM response alongside
+            the AIModel instance
         :return: instance of data class
         """
         llm_settings = self._get_llm_settings(model_settings)
@@ -166,7 +167,7 @@ class OpenAIModel(BaseAIClass):
                         arguments[parameter_name] = conversion_function(parameter_value)
                     except ValueError:
                         logging.error(
-                            f"Found invalid {format_name} value: {parameter_value}"
+                            "Found invalid %s value: %s", format_name, parameter_value
                         )
 
         return arguments
@@ -203,10 +204,12 @@ class OpenAIModel(BaseAIClass):
             messages=[
                 {
                     "role": "system",
-                    "content": "The user will provide text that you need to parse into a structured form.\n"
+                    "content": "The user will provide text that you need to parse "
+                    "into a structured form.\n"
                     f"To validate your response, you must call the `{function_name}` function.\n"
                     "Use the provided text and context to extract, deduce, or infer\n"
-                    f"any parameters needed by `{function_name}`, including any missing data.\n\n{system_instruction}"
+                    f"any parameters needed by `{function_name}`, including any missing data.\n\n"
+                    f"{system_instruction}"
                     "You have been provided the following context to perform your task:\n"
                     f"    - The current time is {datetime.datetime.now()}.",
                 },
@@ -311,7 +314,7 @@ class OpenAIEnum(BaseAIClass):
         )
 
 
-class EnumModelResponse:
+class EnumModelResponse:  # pylint: disable=too-few-public-methods
     """
     Enum model response
     """
@@ -328,11 +331,12 @@ class OpenAIEnumModel(OpenAIEnum):
 
     def __init__(self, data_class: Type, model_settings: Optional[dict] = None):
         super().__init__(data_class, model_settings)
+        # These field definitions are consumed by make_dataclass below.
         fields = [
             (
                 "category",
                 data_class,
-                field(
+                field(  # pylint: disable=invalid-field-call
                     metadata=(
                         {"description": data_class.__doc__}
                         if data_class.__doc__
@@ -343,7 +347,7 @@ class OpenAIEnumModel(OpenAIEnum):
             (
                 "explanation",
                 str,
-                field(
+                field(  # pylint: disable=invalid-field-call
                     metadata={
                         "description": "Explain your categorization in a short and concise manner."
                     }

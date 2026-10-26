@@ -1,6 +1,7 @@
 """
 Decorators for AI classes
 """
+
 from typing import Type, Optional, Callable, Union
 
 from merlin_ai.ai_classes import OpenAIModel, BaseAIClass, OpenAIEnum, OpenAIEnumModel
